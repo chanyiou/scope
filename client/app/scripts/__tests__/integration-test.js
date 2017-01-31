@@ -1,10 +1,10 @@
 import jsdom from 'jsdom';
-import expect from 'expect';
+import expect, { createSpy } from 'expect';
 import { map as makeMap } from 'immutable';
-import each from 'lodash/each';
+import {each, keys} from 'lodash';
 
-// import { initialState } from '../reducers/root';
-import { getTopologies } from '../utils/web-api-utils';
+import { initialState } from '../reducers/root';
+import { getTopologies, getAllNodes, getNodesDelta } from '../utils/web-api-utils';
 import createMockServer from '../../../test/mockServer';
 
 const possiblePathnames = {
@@ -28,8 +28,11 @@ describe('integration', () => {
   describe('Scope API URLs', () => {
     let dispatch;
     let server;
+    let getState;
 
     before((done) => {
+      dispatch = createSpy();
+      getState = overrides => () => initialState.merge(overrides);
       jsdom.changeURL(window, `http://localhost:${port}`);
       server = createMockServer();
       server.listen(port, done);
@@ -50,25 +53,46 @@ describe('integration', () => {
           getTopologies(makeMap, dispatch);
         });
       });
-      // it('from path "/"', (done) => {
-      //
-      // });
-      // it('from path "app/loud-breeze-77"', (done) => {
-      //   server.test((req) => {
-      //     expect(req.url).toEqual('/api/app/loud-breeze-77/api/topology?');
-      //     done();
-      //   });
-      //   setPath('/app/loud-breeze-77');
-      //   getTopologies(makeMap, dispatch);
-      // });
-      // it('from path "/demo"', (done) => {
-      //   server.test((req) => {
-      //     expect(req.url).toEqual('/demo/api/topology?');
-      //     done();
-      //   });
-      //   setPath('/demo');
-      //   getTopologies(makeMap, dispatch);
-      // });
+    });
+    describe.skip('getAllNodes', () => {
+      each(possiblePathnames, (desired, path) => {
+        const topologyUrlsById = {
+          containers: '/api/topology/containers',
+          'containers-by-hostname': '/api/topology/containers-by-hostname',
+          'containers-by-image': '/api/topology/containers-by-image',
+          hosts: '/api/topology/hosts',
+          weave: '/api/topology/weave',
+          processes: '/api/topology/processes',
+        };
+        const requests = [];
+        it(`from ${path}`, (done) => {
+          server.test((req) => {
+            requests.push({path, desired, actual: req.url });
+            debugger;
+            if (requests.length >= keys(topologyUrlsById).length) {
+              // This is broken becaues of fetch
+              done();
+            }
+          });
+          setPath(path);
+          getAllNodes(getState({ topologyUrlsById }), dispatch);
+        });
+      });
+    });
+    describe('getNodesDelta', () => {
+      const urlSuffix = 'topology/containers';
+      each(possiblePathnames, (desired, path) => {
+        it(`from ${path}`, (done) => {
+          server.test((req) => {
+            expect(req.url).toEqual(`${desired}${urlSuffix}`);
+            done();
+          });
+
+          setPath(path);
+          debugger;
+          getNodesDelta(`api/${urlSuffix}`, [], dispatch);
+        });
+      });
     });
   });
 });

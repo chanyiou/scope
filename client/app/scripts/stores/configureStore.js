@@ -1,12 +1,13 @@
+/* eslint-disable no-underscore-dangle */
 import { createStore, applyMiddleware } from 'redux';
 import thunkMiddleware from 'redux-thunk';
 
-import { initialState, rootReducer } from '../reducers/root';
+import { rootReducer } from '../reducers/root';
 
 export default function configureStore() {
   return createStore(
     rootReducer,
-    initialState,
+    window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__(),
     applyMiddleware(thunkMiddleware)
   );
 }

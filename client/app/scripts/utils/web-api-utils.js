@@ -60,19 +60,23 @@ export function basePathSlash(urlPath) {
 
 // JJP - `apiPath` is used to get API URLs right when running as a React component.
 // This needs to be refactored to just accept a URL prop on the scope component.
-let websocketUrl;
-const isIframe = window.location !== window.parent.location;
-const isStandalone = window.location.pathname === '/'
-  || window.location.pathname === '/demo/'
-  || window.location.pathname === '/scoped/'
-  || /\/(.+).html/.test(window.location.pathname);
-const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+function getWebsocketUrl() {
+  let websocketUrl;
+  const isIframe = window.location !== window.parent.location;
+  const isStandalone = window.location.pathname === '/'
+    || window.location.pathname === '/demo/'
+    || window.location.pathname === '/scoped/'
+    || /\/(.+).html/.test(window.location.pathname);
+  const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
 
-if (isIframe || isStandalone) {
-  websocketUrl = `${wsProto}://${location.host}${basePath(location.pathname)}`;
-} else {
-  websocketUrl = `${wsProto}://${location.host}/api${basePath(window.location.pathname)}`;
+  if (isIframe || isStandalone) {
+    websocketUrl = `${wsProto}://${location.host}${basePath(location.pathname)}`;
+  } else {
+    websocketUrl = `${wsProto}://${location.host}/api${basePath(window.location.pathname)}`;
+  }
+  return websocketUrl;
 }
+
 
 // Temporary for testing
 function getApiPath() {
@@ -88,10 +92,11 @@ function getApiPath() {
   return `/api${basePath(window.location.pathname)}/api`;
 }
 
-export const wsUrl = websocketUrl;
+export const wsUrl = getWebsocketUrl();
 
 function createWebsocket(topologyUrl, optionsQuery, dispatch) {
   if (socket) {
+    console.log('socket exists');
     socket.onclose = null;
     socket.onerror = null;
     socket.close();
@@ -102,8 +107,9 @@ function createWebsocket(topologyUrl, optionsQuery, dispatch) {
   // profiling
   createWebsocketAt = new Date();
   firstMessageOnWebsocketAt = 0;
-
-  socket = new WebSocket(`${wsUrl}${topologyUrl}/ws?t=${updateFrequency}&${optionsQuery}`);
+  console.log('createWebsocket called');
+  console.log(`${getWebsocketUrl()}/${topologyUrl}/ws?t=${updateFrequency}&${optionsQuery}`);
+  socket = new WebSocket(`${getWebsocketUrl()}/${topologyUrl}/ws?t=${updateFrequency}&${optionsQuery}`);
 
   socket.onopen = () => {
     dispatch(openWebsocket());
@@ -155,7 +161,7 @@ export function getAllNodes(getState, dispatch) {
       const optionsQuery = buildOptionsQuery(topologyOptions.get(topologyId));
       // Trim the leading slash from the url before requesting.
       // This ensures that scope will request from the correct route if embedded in an iframe.
-      return fetch(`${trimStart(topologyUrl, '/')}?${optionsQuery}`);
+      return fetch(`${topologyUrl}?${optionsQuery}`);
     })
     .then(response => response.json())
     .then(json => dispatch(receiveNodesForTopology(json.nodes, topologyId))),
@@ -186,8 +192,8 @@ export function getTopologies(options, dispatch) {
 
 export function getNodesDelta(topologyUrl, options, dispatch) {
   const optionsQuery = buildOptionsQuery(options);
-
   // only recreate websocket if url changed
+  console.log('getNodesDelta called');
   if (topologyUrl && (topologyUrl !== currentUrl || currentOptions !== optionsQuery)) {
     createWebsocket(topologyUrl, optionsQuery, dispatch);
     currentUrl = topologyUrl;
