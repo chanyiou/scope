@@ -13,7 +13,7 @@ import Topologies from './topologies';
 import TopologyOptions from './topology-options';
 import { getApiDetails, getTopologies } from '../utils/web-api-utils';
 import { focusSearch, pinNextMetric, hitBackspace, hitEnter, hitEsc, unpinMetric,
-  selectMetric, toggleHelp, toggleGridMode } from '../actions/app-actions';
+  selectMetric, toggleHelp, toggleGridMode, toggleContrastMode } from '../actions/app-actions';
 import Details from './details';
 import Nodes from './nodes';
 import GridModeSelector from './grid-mode-selector';
@@ -46,6 +46,9 @@ class App extends React.Component {
       getTopologies(this.props.activeTopologyOptions, this.props.dispatch);
     }
     getApiDetails(this.props.dispatch);
+    if (this.props.contrastMode) {
+      this.props.toggleContrastMode(true);
+    }
   }
 
   componentWillUnmount() {
@@ -153,11 +156,12 @@ function mapStateToProps(state) {
     showingMetricsSelector: state.get('availableCanvasMetrics').count() > 0,
     showingNetworkSelector: state.get('availableNetworks').count() > 0,
     showingTerminal: state.get('controlPipes').size > 0,
-    urlState: getUrlState(state)
+    urlState: getUrlState(state),
+    contrastMode: state.get('contrastMode')
   };
 }
 
-
 export default connect(
-  mapStateToProps
+  mapStateToProps,
+  dispatch => ({ dispatch, toggleContrastMode })
 )(App);
